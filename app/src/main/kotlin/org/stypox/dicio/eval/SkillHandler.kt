@@ -15,10 +15,13 @@ import org.dicio.skill.skill.SkillInfo
 import org.stypox.dicio.di.LocaleManager
 import org.stypox.dicio.di.SkillContextImpl
 import org.stypox.dicio.di.SkillContextInternal
+import org.stypox.dicio.llm.LlmInferenceEngine
+import org.stypox.dicio.llm.MockLlmEngine
 import org.stypox.dicio.settings.datastore.UserSettings
 import org.stypox.dicio.settings.datastore.UserSettingsModule
 import org.stypox.dicio.skills.calculator.CalculatorInfo
 import org.stypox.dicio.skills.current_time.CurrentTimeInfo
+import org.stypox.dicio.skills.fallback.llm.LlmFallbackInfo
 import org.stypox.dicio.skills.fallback.text.TextFallbackInfo
 import org.stypox.dicio.skills.listening.ListeningInfo
 import org.stypox.dicio.skills.lyrics.LyricsInfo
@@ -41,6 +44,7 @@ class SkillHandler @Inject constructor(
     private val dataStore: DataStore<UserSettings>,
     private val localeManager: LocaleManager,
     private val skillContext: SkillContextInternal,
+    private val llmEngine: LlmInferenceEngine,
 ) {
     // TODO improve id handling (maybe just use an int that can point to an Android resource)
     val allSkillInfoList = listOf(
@@ -60,6 +64,11 @@ class SkillHandler @Inject constructor(
         NotifyInfo,
         FlashlightInfo,
     )
+
+    // TODO: wire fallback-mode setting (TEXT vs LLM) once proto schema is extended.
+    // For now the LLM fallback is scaffolded but not selected as the active fallback.
+    @Suppress("unused")
+    private val llmFallbackInfo = LlmFallbackInfo(llmEngine)
 
     private val fallbackSkillInfoList = listOf(
         TextFallbackInfo,
@@ -108,6 +117,7 @@ class SkillHandler @Inject constructor(
                 UserSettingsModule.newDataStoreForPreviews(),
                 LocaleManager.newForPreviews(context),
                 SkillContextImpl.newForPreviews(context),
+                MockLlmEngine(),
             )
         }
     }
