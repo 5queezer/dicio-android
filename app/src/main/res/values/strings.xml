@@ -278,4 +278,16 @@
     <string name="about_privacy_title">Privacy policy</string>
     <string name="about_privacy_description">Dicio connects to external services only when a skill is expected to do so, or to download machine learning models during setup. All speech processing is performed locally on-device, and most skills can be used offline.</string>
     <string name="about_privacy_link" translatable="false">https://stypox.org/dicio-privacy-policy.html</string>
+
+    <string name="pref_fallback_category">Fallback</string>
+    <string name="pref_fallback_mode">Fallback mode</string>
+    <string name="pref_fallback_mode_summary">What to do when no skill matches what you said</string>
+    <string name="pref_fallback_mode_text">Text suggestion</string>
+    <string name="pref_fallback_mode_text_summary">Suggest that the input was not understood and show a web search link</string>
+    <string name="pref_fallback_mode_llm">On-device LLM (experimental)</string>
+    <string name="pref_fallback_mode_llm_summary">Answer unmatched queries using an on-device Gemma model. Requires a ~3.4 GB model download on first use.</string>
+    <string name="llm_model_downloading">Downloading model: %1$s</string>
+    <string name="llm_model_downloaded">Model ready</string>
+    <string name="llm_model_download_error">Download failed</string>
+    <string name="llm_model_download_retry">Retry</string>
 </resources>
