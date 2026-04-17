@@ -11,5 +11,9 @@ import javax.inject.Singleton
 abstract class LlmModule {
     @Binds
     @Singleton
-    abstract fun bindLlmInferenceEngine(mock: MockLlmEngine): LlmInferenceEngine
+    abstract fun bindLlmInferenceEngine(real: RealLlmEngine): LlmInferenceEngine
+
+    @Binds
+    @Singleton
+    abstract fun bindLlmModelProvider(default: DefaultLlmModelProvider): LlmModelProvider
 }

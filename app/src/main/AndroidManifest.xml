@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto"> <!-- Allow installing also on external storage -->
 
+    <!-- LiteRT-LM requires minSdk 23; LLM fallback is gated at runtime so this is safe on 21/22 -->
+    <uses-sdk tools:overrideLibrary="com.google.ai.edge.litertlm" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
