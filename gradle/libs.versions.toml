@@ -37,6 +37,7 @@ unbescape = "1.1.6.RELEASE"
 unicodeCldrGitCommit = "41283df11cce01751c29c400a8f94d1d8687210d"
 voskAndroid = "0.3.70"
 litert = "1.4.0" # cannot update to 2.0.0 as its minSdk is 23
+litertlm = "0.10.0"
 permissionFlow = "2.1.0"
 minSdk = "21"
 targetSdk = "36"
@@ -94,6 +95,7 @@ test-ui-automator = { module = "androidx.test.uiautomator:uiautomator", version.
 unbescape = { module = "org.unbescape:unbescape", version.ref = "unbescape" }
 vosk-android = { module = "com.alphacephei:vosk-android", version.ref = "voskAndroid" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+litertlm = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
 permission-flow-android = { module = "dev.shreyaspatil.permission-flow:permission-flow-android", version.ref = "permissionFlow" }
 permission-flow-compose = { module = "dev.shreyaspatil.permission-flow:permission-flow-compose", version.ref = "permissionFlow" }
 

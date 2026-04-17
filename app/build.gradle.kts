@@ -179,6 +179,7 @@ dependencies {
 
     // LiteRT / Tensorflow Lite
     implementation(libs.litert)
+    implementation(libs.litertlm)
 
     // OkHttp
     implementation(platform(libs.okhttp.bom))
