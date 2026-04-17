@@ -15,7 +15,15 @@ class DefaultLlmModelProvider @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : LlmModelProvider {
     override fun getModelPath(): String? {
-        val file = File(context.filesDir, "models/gemma-4-e4b-it.litertlm")
-        return if (file.exists()) file.absolutePath else null
+        val file = File(
+            context.filesDir,
+            "${LlmModelDownloader.MODELS_SUBDIR}/${LlmModelDownloader.MODEL_FILENAME}",
+        )
+        // only return path if file is fully downloaded — partial/corrupt file would crash RealLlmEngine
+        return if (file.exists() && file.length() == LlmModelDownloader.EXPECTED_SIZE_BYTES) {
+            file.absolutePath
+        } else {
+            null
+        }
     }
 }
