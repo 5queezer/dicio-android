@@ -15,7 +15,9 @@ import org.stypox.dicio.di.LocaleManager
 import org.stypox.dicio.di.SkillContextImpl
 import org.stypox.dicio.di.SkillContextInternal
 import org.stypox.dicio.llm.LlmInferenceEngine
+import org.stypox.dicio.llm.LlmModelProvider
 import org.stypox.dicio.llm.MockLlmEngine
+import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.UserSettings
 import org.stypox.dicio.settings.datastore.UserSettingsModule
 import org.stypox.dicio.skills.calculator.CalculatorInfo
@@ -44,6 +46,7 @@ class SkillHandler @Inject constructor(
     private val localeManager: LocaleManager,
     private val skillContext: SkillContextInternal,
     private val llmEngine: LlmInferenceEngine,
+    private val llmModelProvider: LlmModelProvider,
 ) {
     // TODO improve id handling (maybe just use an int that can point to an Android resource)
     val allSkillInfoList = listOf(
@@ -64,15 +67,6 @@ class SkillHandler @Inject constructor(
         FlashlightInfo,
     )
 
-    // TODO: wire fallback-mode setting (TEXT vs LLM) once proto schema is extended.
-    // For now the LLM fallback is scaffolded but not selected as the active fallback.
-    @Suppress("unused")
-    private val llmFallbackInfo = LlmFallbackInfo(llmEngine)
-
-    private val fallbackSkillInfoList = listOf(
-        TextFallbackInfo,
-    )
-
     private val scope = CoroutineScope(Dispatchers.Default)
 
     // will be null when it has not been initialized yet
@@ -81,26 +75,35 @@ class SkillHandler @Inject constructor(
 
     private val _skillRanker = MutableStateFlow(
         // an initial dummy value, will be overwritten directly by the launched job
-        SkillRanker(listOf(), fallbackSkillInfoList[0].build(skillContext)!!)
+        SkillRanker(listOf(), TextFallbackInfo.build(skillContext))
     )
     val skillRanker: StateFlow<SkillRanker> = _skillRanker
 
     init {
         scope.launch {
             localeManager.locale
-                .combine(dataStore.data) { locale, data -> Pair(locale, data.enabledSkillsMap) }
+                .combine(dataStore.data) { locale, data ->
+                    Triple(locale, data.enabledSkillsMap, data.fallbackMode)
+                }
                 .distinctUntilChanged()
-                .collectLatest { (_, enabledSkills) ->
+                .collectLatest { (_, enabledSkills, fallbackMode) ->
                     // locale is not used here, because the skills directly use the sections locale
 
                     val newEnabledSkillsInfo = allSkillInfoList
                         .filter { enabledSkills.getOrDefault(it.id, true) }
                         .mapNotNull { info -> info.build(skillContext)?.let { skill -> Pair(info, skill) } }
 
+                    val activeFallback: SkillInfo = when {
+                        fallbackMode == FallbackMode.FALLBACK_MODE_LLM &&
+                                llmModelProvider.getModelPath() != null ->
+                            LlmFallbackInfo(llmEngine)
+                        else -> TextFallbackInfo
+                    }
+
                     _enabledSkillsInfo.value = newEnabledSkillsInfo.map { (info, _skill) -> info }
                     _skillRanker.value = SkillRanker(
                         newEnabledSkillsInfo.map { (_info, skill) -> skill },
-                        fallbackSkillInfoList[0].build(skillContext)!!,
+                        activeFallback.build(skillContext)!!,
                     )
                 }
         }
@@ -113,6 +116,7 @@ class SkillHandler @Inject constructor(
                 LocaleManager.newForPreviews(context),
                 SkillContextImpl.newForPreviews(context),
                 MockLlmEngine(),
+                object : LlmModelProvider { override fun getModelPath(): String? = null },
             )
         }
     }

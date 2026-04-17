@@ -12,7 +12,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,11 +23,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.stypox.dicio.R
 import org.stypox.dicio.io.input.SttInputDevice
+import org.stypox.dicio.llm.LlmModelDownloadState
+import org.stypox.dicio.llm.LlmModelDownloader
+import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.InputDevice
 import org.stypox.dicio.settings.datastore.Language
 import org.stypox.dicio.settings.datastore.SpeechOutputDevice
@@ -43,6 +50,8 @@ import org.stypox.dicio.settings.datastore.WakeDevice
 import org.stypox.dicio.settings.ui.SettingsCategoryTitle
 import org.stypox.dicio.settings.ui.SettingsItem
 import org.stypox.dicio.ui.theme.AppTheme
+import org.stypox.dicio.ui.util.LoadingProgress
+import org.stypox.dicio.ui.util.loadingProgressString
 
 
 @Composable
@@ -201,6 +210,52 @@ private fun MainSettingsScreen(
             )
         }
 
+        /* FALLBACK */
+        item { SettingsCategoryTitle(stringResource(R.string.pref_fallback_category)) }
+        val fallback = when (val m = settings.fallbackMode) {
+            FallbackMode.UNRECOGNIZED,
+            FallbackMode.FALLBACK_MODE_UNSET -> FallbackMode.FALLBACK_MODE_TEXT
+            else -> m
+        }
+        item {
+            fallbackMode().Render(fallback, viewModel::setFallbackMode)
+        }
+        if (fallback == FallbackMode.FALLBACK_MODE_LLM) {
+            item {
+                val downloadState by viewModel.downloadState.collectAsState()
+                val context = LocalContext.current
+                when (val s = downloadState) {
+                    is LlmModelDownloadState.NotDownloaded -> SettingsItem(
+                        title = stringResource(R.string.pref_fallback_mode_llm),
+                        icon = Icons.Default.Psychology,
+                        description = stringResource(R.string.pref_fallback_mode_llm_summary),
+                    )
+                    is LlmModelDownloadState.Downloading -> SettingsItem(
+                        title = stringResource(
+                            R.string.llm_model_downloading,
+                            loadingProgressString(context, s.progress),
+                        ),
+                        icon = Icons.Default.Psychology,
+                        content = { LoadingProgress(s.progress) },
+                    )
+                    is LlmModelDownloadState.Downloaded -> SettingsItem(
+                        title = stringResource(R.string.llm_model_downloaded),
+                        icon = Icons.Default.Psychology,
+                    )
+                    is LlmModelDownloadState.ErrorDownloading -> SettingsItem(
+                        title = stringResource(R.string.llm_model_download_error),
+                        icon = Icons.Default.Error,
+                        description = s.throwable.localizedMessage,
+                        content = {
+                            TextButton(onClick = viewModel::retryLlmDownload) {
+                                Text(stringResource(R.string.llm_model_download_retry))
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
         item {
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -220,6 +275,7 @@ private fun MainSettingsScreenPreview() {
                     application = Application(),
                     wakeDeviceWrapper = null,
                     dataStore = newDataStoreForPreviews(),
+                    llmModelDownloader = LlmModelDownloader(Application(), okhttp3.OkHttpClient()),
                 ),
             )
         }
@@ -246,7 +302,8 @@ private fun MainSettingsScreenWithTopBarPreview() {
                 viewModel = MainSettingsViewModel(
                     application = Application(),
                     wakeDeviceWrapper = null,
-                    dataStore = newDataStoreForPreviews()
+                    dataStore = newDataStoreForPreviews(),
+                    llmModelDownloader = LlmModelDownloader(Application(), okhttp3.OkHttpClient()),
                 )
             )
         }

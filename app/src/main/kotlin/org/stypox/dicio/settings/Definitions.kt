@@ -20,10 +20,12 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SpeakerPhone
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.stypox.dicio.R
+import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.InputDevice
 import org.stypox.dicio.settings.datastore.Language
 import org.stypox.dicio.settings.datastore.SpeechOutputDevice
@@ -214,6 +216,25 @@ fun sttPlaySound() = ListSetting(
         ListSetting.Value(
             value = SttPlaySound.STT_PLAY_SOUND_NONE,
             name = stringResource(R.string.pref_stt_play_sound_none),
+        ),
+    ),
+)
+
+@Composable
+fun fallbackMode() = ListSetting(
+    title = stringResource(R.string.pref_fallback_mode),
+    icon = Icons.Default.Psychology,
+    description = stringResource(R.string.pref_fallback_mode_summary),
+    possibleValues = listOf(
+        ListSetting.Value(
+            value = FallbackMode.FALLBACK_MODE_TEXT,
+            name = stringResource(R.string.pref_fallback_mode_text),
+            description = stringResource(R.string.pref_fallback_mode_text_summary),
+        ),
+        ListSetting.Value(
+            value = FallbackMode.FALLBACK_MODE_LLM,
+            name = stringResource(R.string.pref_fallback_mode_llm),
+            description = stringResource(R.string.pref_fallback_mode_llm_summary),
         ),
     ),
 )
