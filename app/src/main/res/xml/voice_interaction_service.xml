@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Metadata for DicioVoiceInteractionService. Points the OS at our session service.
+    recognitionService is optional; we reuse the already-declared SttService.
+-->
+<voice-interaction-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="org.stypox.dicio.voice.DicioVoiceInteractionSessionService"
+    android:recognitionService="org.stypox.dicio.io.input.stt_service.SttService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />
