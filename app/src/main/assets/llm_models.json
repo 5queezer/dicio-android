@@ -9,6 +9,15 @@
     "minDeviceMemoryInGb": 12
   },
   {
+    "id": "phi-4-mini-instruct",
+    "displayName": "Phi-4-mini-instruct",
+    "description": "Microsoft's Phi-4-mini, Q8. Strong reasoning, non-Google alternative. Similar RAM class to Gemma 4 E4B.",
+    "url": "https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+    "fileName": "Phi-4-mini-instruct_q8_ekv4096.litertlm",
+    "sizeInBytes": 3910090752,
+    "minDeviceMemoryInGb": 10
+  },
+  {
     "id": "gemma-4-e2b-it",
     "displayName": "Gemma 4 E2B-IT",
     "description": "Smaller and faster than E4B, noticeably weaker reasoning. Good pick for 8 GB devices.",
@@ -33,6 +42,15 @@
     "url": "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.litertlm",
     "fileName": "gemma3-1b-it-int4.litertlm",
     "sizeInBytes": 584417280,
+    "minDeviceMemoryInGb": 3
+  },
+  {
+    "id": "functiongemma-mobile-actions",
+    "displayName": "FunctionGemma Mobile-Actions (270M)",
+    "description": "Gemma 270M fine-tuned specifically for mobile tool-calls (timers, alarms, open app, etc.). Laser-focused: excellent at actions but weak on general knowledge. Pick this only when you want action-first behaviour on a low-RAM device.",
+    "url": "https://huggingface.co/litert-community/functiongemma-mobile-actions_q8_ekv1024.litertlm/resolve/main/mobile-actions_q8_ekv1024.litertlm",
+    "fileName": "functiongemma-mobile-actions_q8_ekv1024.litertlm",
+    "sizeInBytes": 284426240,
     "minDeviceMemoryInGb": 3
   }
 ]
