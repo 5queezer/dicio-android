@@ -23,4 +23,5 @@ message UserSettings {
     SttPlaySound stt_play_sound = 9;
     int32 stt_silence_duration = 10;
     FallbackMode fallback_mode = 11;
+    string selected_llm_model_id = 12;
 }

@@ -290,4 +290,9 @@
     <string name="llm_model_downloaded">Model ready</string>
     <string name="llm_model_download_error">Download failed</string>
     <string name="llm_model_download_retry">Retry</string>
+    <string name="pref_llm_model">LLM model</string>
+    <string name="pref_llm_model_summary">Choose which on-device LLM to download</string>
+    <string name="pref_llm_model_size_ram">~%1$.1f GB, needs ≥%2$d GB RAM</string>
+    <string name="pref_llm_model_with_size">%1$s (%2$s)</string>
+    <string name="pref_llm_model_not_recommended">%1$s (%2$s) — not recommended for this device</string>
 </resources>

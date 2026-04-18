@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.SpeakerPhone
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.stypox.dicio.R
+import org.stypox.dicio.llm.LlmModelDescriptor
 import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.InputDevice
 import org.stypox.dicio.settings.datastore.Language
@@ -218,6 +219,30 @@ fun sttPlaySound() = ListSetting(
             name = stringResource(R.string.pref_stt_play_sound_none),
         ),
     ),
+)
+
+@Composable
+fun llmModel(
+    models: List<LlmModelDescriptor>,
+    totalRamGb: Int,
+) = ListSetting(
+    title = stringResource(R.string.pref_llm_model),
+    icon = Icons.Default.Psychology,
+    description = stringResource(R.string.pref_llm_model_summary),
+    possibleValues = models.map { m ->
+        val gb = m.sizeInBytes / 1_000_000_000.0
+        val sizeStr = stringResource(R.string.pref_llm_model_size_ram, gb, m.minDeviceMemoryInGb)
+        val desc = if (m.minDeviceMemoryInGb > totalRamGb) {
+            stringResource(R.string.pref_llm_model_not_recommended, m.description, sizeStr)
+        } else {
+            stringResource(R.string.pref_llm_model_with_size, m.description, sizeStr)
+        }
+        ListSetting.Value(
+            value = m.id,
+            name = m.displayName,
+            description = desc,
+        )
+    },
 )
 
 @Composable

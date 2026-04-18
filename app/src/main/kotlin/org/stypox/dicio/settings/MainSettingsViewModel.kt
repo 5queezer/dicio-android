@@ -11,8 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.stypox.dicio.di.WakeDeviceWrapper
 import org.stypox.dicio.io.wake.oww.OpenWakeWordDevice
+import org.stypox.dicio.llm.LlmDeviceCapability
+import org.stypox.dicio.llm.LlmModelDescriptor
 import org.stypox.dicio.llm.LlmModelDownloadState
 import org.stypox.dicio.llm.LlmModelDownloader
+import org.stypox.dicio.llm.LlmModelRegistry
 import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.InputDevice
 import org.stypox.dicio.settings.datastore.Language
@@ -30,6 +33,7 @@ class MainSettingsViewModel @Inject constructor(
     private val wakeDeviceWrapper: WakeDeviceWrapper?,
     private val dataStore: DataStore<UserSettings>,
     private val llmModelDownloader: LlmModelDownloader,
+    private val llmModelRegistry: LlmModelRegistry,
 ) : AndroidViewModel(application) {
     // run blocking because the settings screen cannot start if settings have not been loaded yet
     val settingsState = dataStore.data
@@ -82,6 +86,10 @@ class MainSettingsViewModel @Inject constructor(
 
     val downloadState: StateFlow<LlmModelDownloadState> = llmModelDownloader.state
 
+    val models: List<LlmModelDescriptor> = llmModelRegistry.models
+    val totalRamGb: Int = LlmDeviceCapability.totalRamGb(application)
+    val recommendedModelId: String = llmModelRegistry.selectDefault(totalRamGb).id
+
     fun setFallbackMode(value: FallbackMode) {
         updateData { it.setFallbackMode(value) }
         if (value == FallbackMode.FALLBACK_MODE_LLM) {
@@ -92,6 +100,9 @@ class MainSettingsViewModel @Inject constructor(
             }
         }
     }
+
+    fun setSelectedLlmModel(id: String) =
+        updateData { it.setSelectedLlmModelId(id) }
 
     fun retryLlmDownload() {
         viewModelScope.launch { llmModelDownloader.download() }
