@@ -57,7 +57,7 @@ class RealLlmEngine @Inject constructor(
         val newConversation = newEngine.createConversation(
             ConversationConfig(
                 samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.7),
-                systemInstruction = null,
+                systemInstruction = Contents.of(listOf(Content.Text(SYSTEM_INSTRUCTION))),
                 tools = listOf(),
             )
         )
@@ -124,5 +124,14 @@ class RealLlmEngine @Inject constructor(
 
     companion object {
         private const val TAG = "RealLlmEngine"
+
+        private const val SYSTEM_INSTRUCTION =
+            "You are a voice assistant that ONLY answers questions using your general knowledge. " +
+            "You have no tools: you CANNOT set timers, send messages, open apps, make calls, " +
+            "control the device, or perform any action. If the user asks you to do something, " +
+            "state plainly that you cannot perform actions and stop — never pretend you did it. " +
+            "Always reply in the exact same language as the user's message. " +
+            "Keep answers to at most two short sentences. " +
+            "Use plain text only — no markdown, no bold, no bullet points, no headings, no code."
     }
 }
