@@ -69,6 +69,7 @@ class SkillHandler @Inject constructor(
     )
 
     private val scope = CoroutineScope(Dispatchers.Default)
+    private val llmFallbackInfo = LlmFallbackInfo(llmEngine)
 
     // will be null when it has not been initialized yet
     private val _enabledSkillsInfo: MutableStateFlow<List<SkillInfo>?> = MutableStateFlow(null)
@@ -82,6 +83,7 @@ class SkillHandler @Inject constructor(
 
     init {
         scope.launch {
+            var previousFallback: SkillInfo = TextFallbackInfo
             localeManager.locale
                 .combine(dataStore.data) { locale, data ->
                     Triple(locale, data.enabledSkillsMap, data.fallbackMode)
@@ -96,10 +98,16 @@ class SkillHandler @Inject constructor(
 
                     val activeFallback: SkillInfo = when {
                         fallbackMode == FallbackMode.FALLBACK_MODE_LLM &&
-                                llmModelProvider.getModelPath() != null ->
-                            LlmFallbackInfo(llmEngine)
+                                llmModelProvider.getModelPath() != null -> llmFallbackInfo
                         else -> TextFallbackInfo
                     }
+
+                    // Release the LiteRT-LM native context (multi-GB weights) when leaving
+                    // LLM fallback. Next call to generate() re-initializes.
+                    if (previousFallback === llmFallbackInfo && activeFallback !== llmFallbackInfo) {
+                        llmEngine.close()
+                    }
+                    previousFallback = activeFallback
 
                     _enabledSkillsInfo.value = newEnabledSkillsInfo
                     _skillRanker.value = SkillRanker(

@@ -2,19 +2,15 @@ package org.stypox.dicio.voice
 
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.service.voice.VoiceInteractionSession
 import org.stypox.dicio.MainActivity
 
-/**
- * Session launched by the OS for a single assistant invocation. Rather than rebuilding the
- * STT / skill-evaluation pipeline here, we simply hand off to [MainActivity] with an
- * [Intent.ACTION_ASSIST] intent — the activity's existing handler will pick it up and start
- * listening. The session is closed right after, since all further interaction happens in the
- * activity.
- */
+// Hands off to MainActivity's existing ACTION_ASSIST handler so we don't rebuild the
+// STT / skill-evaluation pipeline inside the session itself.
 class DicioVoiceInteractionSession(context: Context) : VoiceInteractionSession(context) {
 
-    override fun onShow(args: android.os.Bundle?, showFlags: Int) {
+    override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
 
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -27,8 +23,6 @@ class DicioVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
             putExtra(EXTRA_FROM_VOICE_INTERACTION, true)
         }
         startAssistantActivity(intent)
-
-        // All further interaction happens in MainActivity; close the session window.
         hide()
     }
 

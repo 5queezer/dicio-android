@@ -11,31 +11,40 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.stypox.dicio.ui.util.Progress
-import org.stypox.dicio.util.downloadBinaryFileWithPartial
-import org.stypox.dicio.util.getResponse
+import org.stypox.dicio.util.FileToDownload
+import org.stypox.dicio.util.downloadBinaryFilesWithPartial
 import java.io.File
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "LlmModelDownloader"
+private const val PROGRESS_EMIT_MIN_BYTES = 4L * 1024 * 1024
+
+const val LLM_MODEL_URL =
+    "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/9695417f248178c63a9f318c6e0c56cb917cb837/gemma-4-E4B-it.litertlm"
+const val LLM_MODEL_FILENAME = "gemma-4-E4B-it.litertlm"
+const val LLM_MODELS_SUBDIR = "models"
+
+internal fun llmModelFile(context: Context): File =
+    context.filesDir.resolve(LLM_MODELS_SUBDIR).resolve(LLM_MODEL_FILENAME)
+
+internal fun llmFileToDownload(context: Context): FileToDownload =
+    FileToDownload(LLM_MODEL_URL, llmModelFile(context))
+
 @Singleton
 class LlmModelDownloader @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
 ) {
-    private val modelFile: File =
-        context.filesDir.resolve(MODELS_SUBDIR).resolve(MODEL_FILENAME)
+    private val fileToDownload = llmFileToDownload(context)
     private val cacheDir: File = context.cacheDir
 
     private val _state = MutableStateFlow<LlmModelDownloadState>(initialState())
     val state: StateFlow<LlmModelDownloadState> = _state.asStateFlow()
 
     private fun initialState(): LlmModelDownloadState =
-        if (modelFile.exists() && modelFile.length() == EXPECTED_SIZE_BYTES) {
-            LlmModelDownloadState.Downloaded
-        } else {
-            LlmModelDownloadState.NotDownloaded
-        }
+        if (!fileToDownload.needsToBeDownloaded()) LlmModelDownloadState.Downloaded
+        else LlmModelDownloadState.NotDownloaded
 
     suspend fun download() {
         when (_state.value) {
@@ -48,26 +57,22 @@ class LlmModelDownloader @Inject constructor(
 
         try {
             withContext(Dispatchers.IO) {
-                modelFile.parentFile?.mkdirs()
-                downloadBinaryFileWithPartial(
-                    response = okHttpClient.getResponse(MODEL_URL),
-                    file = modelFile,
+                fileToDownload.file.parentFile?.mkdirs()
+                var lastEmit = 0L
+                downloadBinaryFilesWithPartial(
+                    urlsFiles = listOf(fileToDownload),
+                    httpClient = okHttpClient,
                     cacheDir = cacheDir,
-                ) { currentBytes, totalBytes ->
-                    _state.value = LlmModelDownloadState.Downloading(
-                        Progress(0, 1, currentBytes, totalBytes)
-                    )
+                ) { progress ->
+                    // Throttle: a 3.4 GB download at 256 KB chunks would otherwise emit ~14k
+                    // states, each allocating a fresh Progress + triggering Compose recomposition.
+                    if (progress.currentBytes - lastEmit >= PROGRESS_EMIT_MIN_BYTES ||
+                        progress.currentBytes == progress.totalBytes) {
+                        lastEmit = progress.currentBytes
+                        _state.value = LlmModelDownloadState.Downloading(progress)
+                    }
                 }
             }
-
-            if (modelFile.length() != EXPECTED_SIZE_BYTES) {
-                modelFile.delete()
-                _state.value = LlmModelDownloadState.ErrorDownloading(
-                    IOException("Downloaded file size mismatch")
-                )
-                return
-            }
-
             _state.value = LlmModelDownloadState.Downloaded
         } catch (ce: CancellationException) {
             // settle to a resting state so the flow isn't stuck on Downloading
@@ -77,15 +82,5 @@ class LlmModelDownloader @Inject constructor(
             Log.e(TAG, "Can't download LLM model", t)
             _state.value = LlmModelDownloadState.ErrorDownloading(t)
         }
-    }
-
-    companion object {
-        private const val TAG = "LlmModelDownloader"
-
-        const val MODEL_URL =
-            "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/9695417f248178c63a9f318c6e0c56cb917cb837/gemma-4-E4B-it.litertlm"
-        const val EXPECTED_SIZE_BYTES = 3_654_467_584L
-        const val MODEL_FILENAME = "gemma-4-E4B-it.litertlm"
-        const val MODELS_SUBDIR = "models"
     }
 }
