@@ -18,6 +18,22 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "DicioTools"
+
+private inline fun runTool(
+    description: String,
+    noAppReason: String,
+    block: () -> Map<String, String>,
+): Map<String, String> = try {
+    block()
+} catch (e: ActivityNotFoundException) {
+    Log.w(TAG, "No activity can handle $description", e)
+    mapOf("result" to "error", "reason" to (e.message ?: noAppReason))
+} catch (e: Exception) {
+    Log.w(TAG, "Failed to $description", e)
+    mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+}
+
 @Singleton
 class DicioTools @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -27,67 +43,39 @@ class DicioTools @Inject constructor(
     fun setTimer(
         @ToolParam(description = "Duration in minutes (integer).") minutes: Int,
         @ToolParam(description = "Optional short label for the timer.") label: String = "",
-    ): Map<String, String> {
-        return try {
-            val intent = Intent(AlarmClock.ACTION_SET_TIMER).apply {
-                putExtra(AlarmClock.EXTRA_LENGTH, minutes * 60)
-                if (label.isNotEmpty()) putExtra(AlarmClock.EXTRA_MESSAGE, label)
-                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            mapOf(
-                "result" to "success",
-                "minutes" to minutes.toString(),
-                "label" to label,
-            )
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_SET_TIMER", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no timer app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to start timer", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+    ): Map<String, String> = runTool("start timer", "no timer app") {
+        val intent = Intent(AlarmClock.ACTION_SET_TIMER).apply {
+            putExtra(AlarmClock.EXTRA_LENGTH, minutes * 60)
+            if (label.isNotEmpty()) putExtra(AlarmClock.EXTRA_MESSAGE, label)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
+        mapOf("result" to "success", "minutes" to minutes.toString(), "label" to label)
     }
 
     @Tool(description = "Searches the web for the given query using the user's default search provider.")
     fun searchWeb(
         @ToolParam(description = "The search query to run on the web.") query: String,
-    ): Map<String, String> {
-        return try {
-            val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-                putExtra(SearchManager.QUERY, query)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            mapOf("result" to "success", "query" to query)
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_WEB_SEARCH", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no search app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to run web search", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+    ): Map<String, String> = runTool("run web search", "no search app") {
+        val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+            putExtra(SearchManager.QUERY, query)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
+        mapOf("result" to "success", "query" to query)
     }
 
     @Tool(description = "Opens a URL in the user's default browser.")
     fun openUrl(
         @ToolParam(description = "The full URL or bare domain to open.") url: String,
-    ): Map<String, String> {
-        return try {
-            val normalized = if (url.contains("://")) url else "https://$url"
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalized)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            mapOf("result" to "success", "url" to normalized)
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_VIEW for URL", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no browser app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open URL", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+    ): Map<String, String> = runTool("open URL", "no browser app") {
+        val normalized = if (url.contains("://")) url else "https://$url"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalized)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
+        mapOf("result" to "success", "url" to normalized)
     }
 
     @Tool(description = "Sets an alarm for a specific time of day (24-hour clock) with an optional label.")
@@ -95,48 +83,32 @@ class DicioTools @Inject constructor(
         @ToolParam(description = "Hour of the day, 0-23.") hour: Int,
         @ToolParam(description = "Minute of the hour, 0-59.") minute: Int,
         @ToolParam(description = "Optional label for the alarm.") label: String = "",
-    ): Map<String, String> {
-        return try {
-            val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-                putExtra(AlarmClock.EXTRA_HOUR, hour)
-                putExtra(AlarmClock.EXTRA_MINUTES, minute)
-                if (label.isNotEmpty()) putExtra(AlarmClock.EXTRA_MESSAGE, label)
-                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            mapOf(
-                "result" to "success",
-                "hour" to hour.toString(),
-                "minute" to minute.toString(),
-                "label" to label,
-            )
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_SET_ALARM", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no alarm app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to set alarm", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+    ): Map<String, String> = runTool("set alarm", "no alarm app") {
+        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+            putExtra(AlarmClock.EXTRA_HOUR, hour)
+            putExtra(AlarmClock.EXTRA_MINUTES, minute)
+            if (label.isNotEmpty()) putExtra(AlarmClock.EXTRA_MESSAGE, label)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
+        mapOf(
+            "result" to "success",
+            "hour" to hour.toString(),
+            "minute" to minute.toString(),
+            "label" to label,
+        )
     }
 
     @Tool(description = "Opens the phone dialer pre-filled with the given number, but does not place the call - the user must press call.")
     fun dialPhone(
         @ToolParam(description = "The phone number to dial, digits and optional leading + for international.") number: String,
-    ): Map<String, String> {
-        return try {
-            val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-            mapOf("result" to "success", "number" to number)
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_DIAL", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no dialer app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to dial number", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
+    ): Map<String, String> = runTool("dial number", "no dialer app") {
+        val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        context.startActivity(intent)
+        mapOf("result" to "success", "number" to number)
     }
 
     @Tool(description = "Opens the calendar app pre-filled with a new event. The user must confirm saving.")
@@ -152,7 +124,7 @@ class DicioTools @Inject constructor(
             Log.w(TAG, "Invalid datetime for calendar event: $startIso", e)
             return mapOf("result" to "error", "reason" to "invalid datetime format, expected YYYY-MM-DDTHH:MM:SS")
         }
-        return try {
+        return runTool("create calendar event", "no calendar app") {
             val endMs = startMs + durationMinutes * 60_000L
             val intent = Intent(Intent.ACTION_INSERT).apply {
                 data = CalendarContract.Events.CONTENT_URI
@@ -168,55 +140,36 @@ class DicioTools @Inject constructor(
                 "start" to startIso,
                 "durationMinutes" to durationMinutes.toString(),
             )
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity can handle ACTION_INSERT for calendar", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "no calendar app"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to create calendar event", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
         }
     }
 
     @Tool(description = "Opens an installed app by its display name (fuzzy match).")
     fun openApp(
         @ToolParam(description = "Partial or full name of the app as shown in the launcher (e.g. 'signal', 'whatsapp', 'settings').") appName: String,
-    ): Map<String, String> {
-        return try {
-            val pm = context.packageManager
-            val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val resolved = pm.queryIntentActivities(mainIntent, 0)
-            val matches = resolved.filter {
-                it.loadLabel(pm).toString().contains(appName, ignoreCase = true)
+    ): Map<String, String> = runTool("open app", "activity not found") {
+        val pm = context.packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        // Cache each label once — loadLabel is an IPC + resource lookup per call.
+        val resolved = pm.queryIntentActivities(mainIntent, 0)
+            .map { it to it.loadLabel(pm).toString() }
+        val matches = resolved.filter { (_, label) -> label.contains(appName, ignoreCase = true) }
+        when {
+            matches.isEmpty() ->
+                mapOf("result" to "error", "reason" to "no app matching '$appName' found")
+            matches.size > 1 -> mapOf(
+                "result" to "error",
+                "reason" to "ambiguous app name, matched ${matches.size} apps",
+                "candidates" to matches.joinToString(", ") { (_, label) -> label },
+            )
+            else -> {
+                val (info, label) = matches.first()
+                val pkg = info.activityInfo.packageName
+                val launch = pm.getLaunchIntentForPackage(pkg)
+                    ?: return@runTool mapOf("result" to "error", "reason" to "no launch intent for $pkg")
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(launch)
+                mapOf("result" to "success", "app" to label, "package" to pkg)
             }
-            when {
-                matches.isEmpty() ->
-                    mapOf("result" to "error", "reason" to "no app matching '$appName' found")
-                matches.size > 1 -> mapOf(
-                    "result" to "error",
-                    "reason" to "ambiguous app name, matched ${matches.size} apps",
-                    "candidates" to matches.joinToString(", ") { it.loadLabel(pm).toString() },
-                )
-                else -> {
-                    val match = matches.first()
-                    val label = match.loadLabel(pm).toString()
-                    val pkg = match.activityInfo.packageName
-                    val launch = pm.getLaunchIntentForPackage(pkg)
-                        ?: return mapOf("result" to "error", "reason" to "no launch intent for $pkg")
-                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(launch)
-                    mapOf("result" to "success", "app" to label, "package" to pkg)
-                }
-            }
-        } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "Failed to launch app '$appName'", e)
-            mapOf("result" to "error", "reason" to (e.message ?: "activity not found"))
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open app '$appName'", e)
-            mapOf("result" to "error", "reason" to (e.message ?: e.javaClass.simpleName))
         }
-    }
-
-    companion object {
-        private const val TAG = "DicioTools"
     }
 }

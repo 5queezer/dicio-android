@@ -9,4 +9,6 @@ class MockLlmEngine @Inject constructor() : LlmInferenceEngine {
 
     override suspend fun generate(prompt: String): String =
         "Mock LLM response: $prompt"
+
+    override suspend fun close() = Unit
 }
