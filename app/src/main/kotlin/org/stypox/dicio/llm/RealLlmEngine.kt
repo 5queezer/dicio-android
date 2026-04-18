@@ -12,6 +12,7 @@ import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
+import com.google.ai.edge.litertlm.tool
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -25,6 +26,7 @@ import kotlin.coroutines.resumeWithException
 class RealLlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelProvider: LlmModelProvider,
+    private val dicioTools: DicioTools,
 ) : LlmInferenceEngine {
 
     private val mutex = Mutex()
@@ -58,7 +60,7 @@ class RealLlmEngine @Inject constructor(
             ConversationConfig(
                 samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.7),
                 systemInstruction = Contents.of(listOf(Content.Text(SYSTEM_INSTRUCTION))),
-                tools = listOf(),
+                tools = listOf(tool(dicioTools)),
             )
         )
 
@@ -126,12 +128,17 @@ class RealLlmEngine @Inject constructor(
         private const val TAG = "RealLlmEngine"
 
         private const val SYSTEM_INSTRUCTION =
-            "You are a voice assistant that ONLY answers questions using your general knowledge. " +
-            "You have no tools: you CANNOT set timers, send messages, open apps, make calls, " +
-            "control the device, or perform any action. If the user asks you to do something, " +
-            "state plainly that you cannot perform actions and stop — never pretend you did it. " +
-            "Always reply in the exact same language as the user's message. " +
-            "Keep answers to at most two short sentences. " +
+            "You are a voice assistant. " +
+            "When the user asks you to perform an action that matches one of your available tools " +
+            "(for example starting a timer), call the tool IMMEDIATELY — do NOT produce any text " +
+            "before the tool call. " +
+            "After the tool response arrives, reply with exactly one short confirmation sentence " +
+            "in the same language as the user's request (e.g. \"Timer für 3 Minuten gestartet.\" " +
+            "on success, or a brief explanation of the problem on failure). Never repeat yourself " +
+            "and never end your turn silently after a tool call. " +
+            "Only answer in words without calling a tool when no tool applies or the request is " +
+            "purely informational. Keep textual answers to at most two short sentences, in the " +
+            "same language as the user. " +
             "Use plain text only — no markdown, no bold, no bullet points, no headings, no code."
     }
 }
