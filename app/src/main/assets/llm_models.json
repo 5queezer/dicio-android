@@ -1,0 +1,38 @@
+[
+  {
+    "id": "gemma-4-e4b-it",
+    "displayName": "Gemma 4 E4B-IT",
+    "description": "Best quality. Recommended for 12 GB+ RAM phones (e.g. Pixel 10). ~7 tok/s on modern CPUs.",
+    "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/9695417f248178c63a9f318c6e0c56cb917cb837/gemma-4-E4B-it.litertlm",
+    "fileName": "gemma-4-E4B-it.litertlm",
+    "sizeInBytes": 3654467584,
+    "minDeviceMemoryInGb": 12
+  },
+  {
+    "id": "gemma-4-e2b-it",
+    "displayName": "Gemma 4 E2B-IT",
+    "description": "Smaller and faster than E4B, noticeably weaker reasoning. Good pick for 8 GB devices.",
+    "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
+    "fileName": "gemma-4-E2B-it.litertlm",
+    "sizeInBytes": 2583085056,
+    "minDeviceMemoryInGb": 8
+  },
+  {
+    "id": "gemma-3n-e2b-it",
+    "displayName": "Gemma 3n E2B-IT",
+    "description": "Previous-gen fallback if the newer Gemma 4 files become unavailable.",
+    "url": "https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4.litertlm",
+    "fileName": "gemma-3n-E2B-it-int4.litertlm",
+    "sizeInBytes": 3655827456,
+    "minDeviceMemoryInGb": 8
+  },
+  {
+    "id": "gemma3-1b-it",
+    "displayName": "Gemma 3 1B-IT",
+    "description": "Tiny and fast. Noticeably dumber but viable on low-RAM devices (Fairphone class).",
+    "url": "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.litertlm",
+    "fileName": "gemma3-1b-it-int4.litertlm",
+    "sizeInBytes": 584417280,
+    "minDeviceMemoryInGb": 3
+  }
+]

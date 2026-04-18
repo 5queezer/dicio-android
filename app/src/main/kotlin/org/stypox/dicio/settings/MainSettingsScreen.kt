@@ -222,6 +222,13 @@ private fun MainSettingsScreen(
         }
         if (fallback == FallbackMode.FALLBACK_MODE_LLM) {
             item {
+                val selectedId = settings.selectedLlmModelId.ifEmpty { viewModel.recommendedModelId }
+                llmModel(viewModel.models, viewModel.totalRamGb).Render(
+                    selectedId,
+                    viewModel::setSelectedLlmModel,
+                )
+            }
+            item {
                 val downloadState by viewModel.downloadState.collectAsState()
                 val context = LocalContext.current
                 when (val s = downloadState) {
@@ -262,6 +269,20 @@ private fun MainSettingsScreen(
     }
 }
 
+private fun previewViewModel(): MainSettingsViewModel {
+    val app = Application()
+    val ds = newDataStoreForPreviews()
+    val registry = org.stypox.dicio.llm.LlmModelRegistry(app)
+    val downloader = LlmModelDownloader(app, okhttp3.OkHttpClient(), ds, registry)
+    return MainSettingsViewModel(
+        application = app,
+        wakeDeviceWrapper = null,
+        dataStore = ds,
+        llmModelDownloader = downloader,
+        llmModelRegistry = registry,
+    )
+}
+
 @Preview
 @Composable
 private fun MainSettingsScreenPreview() {
@@ -271,12 +292,7 @@ private fun MainSettingsScreenPreview() {
         ) {
             MainSettingsScreen(
                 navigateToSkillSettings = {},
-                viewModel = MainSettingsViewModel(
-                    application = Application(),
-                    wakeDeviceWrapper = null,
-                    dataStore = newDataStoreForPreviews(),
-                    llmModelDownloader = LlmModelDownloader(Application(), okhttp3.OkHttpClient()),
-                ),
+                viewModel = previewViewModel(),
             )
         }
     }
@@ -299,12 +315,7 @@ private fun MainSettingsScreenWithTopBarPreview() {
                     }
                 },
                 navigateToSkillSettings = {},
-                viewModel = MainSettingsViewModel(
-                    application = Application(),
-                    wakeDeviceWrapper = null,
-                    dataStore = newDataStoreForPreviews(),
-                    llmModelDownloader = LlmModelDownloader(Application(), okhttp3.OkHttpClient()),
-                )
+                viewModel = previewViewModel()
             )
         }
     }
