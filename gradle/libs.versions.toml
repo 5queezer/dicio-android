@@ -38,6 +38,7 @@ unicodeCldrGitCommit = "41283df11cce01751c29c400a8f94d1d8687210d"
 voskAndroid = "0.3.70"
 litert = "1.4.0" # cannot update to 2.0.0 as its minSdk is 23
 litertlm = "0.10.0"
+richtext = "0.20.0"
 permissionFlow = "2.1.0"
 minSdk = "21"
 targetSdk = "36"
@@ -96,6 +97,8 @@ unbescape = { module = "org.unbescape:unbescape", version.ref = "unbescape" }
 vosk-android = { module = "com.alphacephei:vosk-android", version.ref = "voskAndroid" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 litertlm = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
+richtext-commonmark = { module = "com.halilibo.compose-richtext:richtext-commonmark", version.ref = "richtext" }
+richtext-ui-material3 = { module = "com.halilibo.compose-richtext:richtext-ui-material3", version.ref = "richtext" }
 permission-flow-android = { module = "dev.shreyaspatil.permission-flow:permission-flow-android", version.ref = "permissionFlow" }
 permission-flow-compose = { module = "dev.shreyaspatil.permission-flow:permission-flow-compose", version.ref = "permissionFlow" }
 

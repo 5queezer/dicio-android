@@ -181,6 +181,10 @@ dependencies {
     implementation(libs.litert)
     implementation(libs.litertlm)
 
+    // Markdown rendering for LLM fallback output
+    implementation(libs.richtext.commonmark)
+    implementation(libs.richtext.ui.material3)
+
     // OkHttp
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
