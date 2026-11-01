@@ -6,6 +6,8 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import org.dicio.skill.context.SkillContext
+import org.dicio.skill.skill.AlwaysWorstScore
+import org.dicio.skill.skill.Score
 import org.dicio.skill.skill.SkillInfo
 import org.dicio.skill.skill.SkillOutput
 import org.dicio.skill.standard.StandardRecognizerData
@@ -15,6 +17,20 @@ import org.stypox.dicio.util.StringUtils
 
 class OpenSkill(correspondingSkillInfo: SkillInfo, data: StandardRecognizerData<Open>)
     : StandardRecognizerSkill<Open>(correspondingSkillInfo, data) {
+
+    // "Öffne die Webseite wikipedia.org" matches "open <app>" without naming an installed app: leave
+    // such input to the other skills or the fallback instead of answering "unknown app"
+    override fun score(ctx: SkillContext, input: String): Pair<Score, Open> {
+        val (score, data) = super.score(ctx, input)
+        if (score.scoreIn01Range() < 0.5f) {
+            return Pair(score, data)  // not a contender anyway; spare the package manager query
+        }
+        val userAppName = when (data) {
+            is Open.Query -> data.what?.trim { it <= ' ' }
+        }
+        val app = userAppName?.let { getMostSimilarApp(ctx.android.packageManager, it) }
+        return Pair(if (app == null) AlwaysWorstScore else score, data)
+    }
 
     override suspend fun generateOutput(ctx: SkillContext, inputData: Open): SkillOutput {
         val userAppName = when (inputData) {

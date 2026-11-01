@@ -7,6 +7,7 @@ import org.dicio.skill.skill.SkillInfo
 import org.dicio.skill.skill.SkillOutput
 import org.dicio.skill.standard.StandardRecognizerData
 import org.dicio.skill.standard.StandardRecognizerSkill
+import org.dicio.skill.standard.util.nfkdNormalizeWord
 import org.stypox.dicio.cldr.CldrLanguages
 import org.stypox.dicio.cldr.CldrLanguages.LocaleAndTranslation
 import org.stypox.dicio.sentences.Sentences.Translation
@@ -30,9 +31,20 @@ class TranslationSkill(correspondingSkillInfo: SkillInfo, data: StandardRecogniz
         val (score, data) = super.score(ctx, input)
         val cldr = CldrLanguages[ctx.locale.language] ?: return Pair(score, data)
         val translate = when (data) { is Translate -> data }
-        val unknown = listOfNotNull(translate.source, translate.target)
-            .any { cldr.getLocaleByLanguageName(it) == null }
+        val unknown = listOfNotNull(translate.source, translate.target).any { captured ->
+            cldr.getLocaleByLanguageName(captured)?.let { namesLanguage(captured, it) } != true
+        }
         return Pair(if (unknown) AlwaysWorstScore else score, data)
+    }
+
+    // getLocaleByLanguageName is fuzzy enough to find "Kalenjin" in "den Kalender ein": for deciding
+    // whether this is a translation at all, a word of the capture must start with the language name
+    // ("Englische" names "Englisch") and the capture must be short
+    private fun namesLanguage(captured: String, language: LocaleAndTranslation): Boolean {
+        val text = nfkdNormalizeWord(captured.trim().lowercase())
+        val name = language.translationNormalized.lowercase()
+        return name.length >= 3 && text.split(WHITESPACE).size <= 3 &&
+            Regex("(^|\\s)" + Regex.escape(name)).containsMatchIn(text)
     }
 
     // This connects to lingva.ml which runs the Lingva Translate frontend to Google Translate
@@ -99,6 +111,7 @@ class TranslationSkill(correspondingSkillInfo: SkillInfo, data: StandardRecogniz
 
     companion object {
         private const val TRANSLATE_URL = "https://lingva.ml/api/v1"
+        private val WHITESPACE = Regex("\\s+")
         val TRANSLATE_SUPPORTED_LOCALES = listOf(
             "af", "sq", "am", "ar", "hy", "as", "ay", "az", "bm", "eu",
             "be", "bn", "bho", "bs", "bg", "ca", "ceb", "ny", "zh", "zh_HANT",
