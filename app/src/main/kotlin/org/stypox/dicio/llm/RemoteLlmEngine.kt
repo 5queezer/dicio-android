@@ -27,6 +27,7 @@ import kotlin.reflect.full.findAnnotation
 
 private const val TAG = "RemoteLlmEngine"
 private const val MAX_TOOL_ROUNDS = 4
+private const val MAX_HISTORY_TURNS = 6
 
 /**
  * Runs the LLM fallback on an OpenAI-compatible server (`llm_remote_url`, e.g. Ollama or
@@ -85,35 +86,45 @@ class RemoteLlmEngine @Inject constructor(
             messages = newConversation()
         }
         lastUse = System.currentTimeMillis()
-        messages.put(JSONObject().put("role", "user").put("content", prompt))
-
-        repeat(MAX_TOOL_ROUNDS) {
-            val message = complete(url, settings.llmRemoteModel)
-            messages.put(message)
-            val calls = message.optJSONArray("tool_calls")
-            if (calls == null || calls.length() == 0) {
-                val text = message.optString("content")
-                Log.d(TAG, "reply $text")
-                return@withLock text
+        val start = messages.length()
+        try {
+            messages.put(JSONObject().put("role", "user").put("content", prompt))
+            for (round in 0..MAX_TOOL_ROUNDS) {
+                // the last round offers no tools, so a model that keeps calling them has to answer
+                val message = complete(url, settings.llmRemoteModel, tools = round < MAX_TOOL_ROUNDS)
+                messages.put(message)
+                val calls = message.optJSONArray("tool_calls")
+                if (calls == null || calls.length() == 0) {
+                    val text = if (message.isNull("content")) "" else message.getString("content")
+                    Log.d(TAG, "reply $text")
+                    trimHistory()
+                    return@withLock text
+                }
+                for (i in 0 until calls.length()) {
+                    val call = calls.getJSONObject(i)
+                    messages.put(
+                        JSONObject().put("role", "tool").put("tool_call_id", call.optString("id"))
+                            .put("content", runTool(call))
+                    )
+                }
             }
-            for (i in 0 until calls.length()) {
-                val call = calls.getJSONObject(i)
-                messages.put(
-                    JSONObject().put("role", "tool").put("tool_call_id", call.optString("id"))
-                        .put("content", runTool(call.getJSONObject("function")))
-                )
+            error("no answer after $MAX_TOOL_ROUNDS tool rounds")
+        } catch (e: Throwable) {
+            // a failed turn must not stay in the history, or the next request would resend it
+            while (messages.length() > start) {
+                messages.remove(messages.length() - 1)
             }
+            throw e
         }
-        error("no answer after $MAX_TOOL_ROUNDS tool rounds")
     }
 
-    private suspend fun complete(url: String, model: String): JSONObject {
+    private suspend fun complete(url: String, model: String, tools: Boolean): JSONObject {
         val body = JSONObject()
-            .put("model", model)
             .put("messages", messages)
-            .put("tools", toolsJson)
             .put("temperature", LLM_TEMPERATURE)
             .put("top_p", 0.95)
+        if (model.isNotBlank()) body.put("model", model)  // servers with one model ignore or reject ""
+        if (tools) body.put("tools", toolsJson)
         val request = Request.Builder().url(url)
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
@@ -128,17 +139,18 @@ class RemoteLlmEngine @Inject constructor(
         }
     }
 
-    private fun runTool(function: JSONObject): String {
-        val name = function.getString("name")
-        // arguments is a JSON string per the OpenAI API; some servers send an object
-        val args = function.opt("arguments").let { if (it is JSONObject) it.toString() else it as? String }
-        Log.d(TAG, "tool_call $name $args")
+    private fun runTool(call: JSONObject): String {
         val result = try {
-            val function = tools[name] ?: error("unknown tool $name")
+            val function = call.getJSONObject("function")
+            val name = function.getString("name")
+            // arguments is a JSON string per the OpenAI API; some servers send an object
+            val args = function.opt("arguments").let { if (it is JSONObject) it.toString() else it as? String }
+            Log.d(TAG, "tool_call $name $args")
+            val tool = tools[name] ?: error("unknown tool $name")
             val json = JSONObject(args?.ifBlank { null } ?: "{}")
-            val values = mutableMapOf<KParameter, Any?>(function.parameters[0] to dicioTools)
-            for (param in function.parameters.filter { it.kind == KParameter.Kind.VALUE }) {
-                if (json.has(param.name)) {
+            val values = mutableMapOf<KParameter, Any?>(tool.parameters[0] to dicioTools)
+            for (param in tool.parameters.filter { it.kind == KParameter.Kind.VALUE }) {
+                if (json.has(param.name) && !json.isNull(param.name)) {
                     values[param] = when (jsonType(param)) {
                         "integer" -> json.getInt(param.name!!)
                         "number" -> json.getDouble(param.name!!)
@@ -149,13 +161,24 @@ class RemoteLlmEngine @Inject constructor(
                     error("missing argument ${param.name}")
                 }
             }
-            JSONObject(function.callBy(values) as Map<*, *>).toString()
+            JSONObject(tool.callBy(values) as Map<*, *>).toString()
         } catch (e: Exception) {
-            Log.w(TAG, "Tool $name failed", e)
+            Log.w(TAG, "Tool call $call failed", e)
             JSONObject().put("result", "error").put("reason", e.message ?: e.javaClass.simpleName).toString()
         }
         Log.d(TAG, "tool_result $result")
         return result
+    }
+
+    // keeps the system message and the last MAX_HISTORY_TURNS user turns with their answers
+    private fun trimHistory() {
+        val users = (0 until messages.length()).filter { messages.getJSONObject(it).optString("role") == "user" }
+        if (users.size <= MAX_HISTORY_TURNS) return
+        val kept = JSONArray().put(messages.get(0))
+        for (i in users[users.size - MAX_HISTORY_TURNS] until messages.length()) {
+            kept.put(messages.get(i))
+        }
+        messages = kept
     }
 
     private fun jsonType(param: KParameter) = when (param.type.classifier) {

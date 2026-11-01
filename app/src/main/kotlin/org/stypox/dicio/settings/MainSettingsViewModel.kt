@@ -103,8 +103,17 @@ class MainSettingsViewModel @Inject constructor(
 
     fun setSelectedLlmModel(id: String) =
         updateData { it.setSelectedLlmModelId(id) }
-    fun setLlmRemoteUrl(value: String) =
+    fun setLlmRemoteUrl(value: String) {
         updateData { it.setLlmRemoteUrl(value.trim()) }
+        // without a server the on-device model is needed again
+        if (value.isBlank() && settingsState.value.fallbackMode == FallbackMode.FALLBACK_MODE_LLM) {
+            val current = llmModelDownloader.state.value
+            if (current is LlmModelDownloadState.NotDownloaded ||
+                current is LlmModelDownloadState.ErrorDownloading) {
+                viewModelScope.launch { llmModelDownloader.download() }
+            }
+        }
+    }
     fun setLlmRemoteModel(value: String) =
         updateData { it.setLlmRemoteModel(value.trim()) }
 

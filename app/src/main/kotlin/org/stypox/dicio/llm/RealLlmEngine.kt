@@ -74,6 +74,17 @@ class RealLlmEngine @Inject constructor(
         lastUse = System.currentTimeMillis()
         val conv = conversation ?: error("Conversation is null after initialize()")
 
+        try {
+            generateIn(conv, prompt)
+        } catch (e: Throwable) {
+            // e.g. the conversation exceeded maxNumTokens: start over instead of failing until idle
+            conv.close()
+            conversation = newConversation(engine!!)
+            throw e
+        }
+    }
+
+    private suspend fun generateIn(conv: Conversation, prompt: String): String =
         suspendCancellableCoroutine { cont ->
             val accumulated = StringBuilder()
             conv.sendMessageAsync(
@@ -105,7 +116,6 @@ class RealLlmEngine @Inject constructor(
                 }
             }
         }
-    }
 
     override suspend fun close() = mutex.withLock {
         try {
