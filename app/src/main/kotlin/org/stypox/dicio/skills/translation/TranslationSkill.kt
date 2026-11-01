@@ -1,6 +1,8 @@
 package org.stypox.dicio.skills.translation
 
 import org.dicio.skill.context.SkillContext
+import org.dicio.skill.skill.AlwaysWorstScore
+import org.dicio.skill.skill.Score
 import org.dicio.skill.skill.SkillInfo
 import org.dicio.skill.skill.SkillOutput
 import org.dicio.skill.standard.StandardRecognizerData
@@ -20,6 +22,17 @@ class TranslationSkill(correspondingSkillInfo: SkillInfo, data: StandardRecogniz
     private fun findCodeInSupportedLocales(language: LocaleAndTranslation): String? {
         return TRANSLATE_SUPPORTED_LOCALES.firstOrNull { it.lowercase() == language.locale }
             ?: TRANSLATE_SUPPORTED_LOCALES.firstOrNull { language.locale.startsWith(it.lowercase()) }
+    }
+
+    // "stell einen Timer auf fünf Minuten" matches "... auf <target language>"; when a captured
+    // language is not a language name, leave the input to the other skills or the fallback
+    override fun score(ctx: SkillContext, input: String): Pair<Score, Translation> {
+        val (score, data) = super.score(ctx, input)
+        val cldr = CldrLanguages[ctx.locale.language] ?: return Pair(score, data)
+        val translate = when (data) { is Translate -> data }
+        val unknown = listOfNotNull(translate.source, translate.target)
+            .any { cldr.getLocaleByLanguageName(it) == null }
+        return Pair(if (unknown) AlwaysWorstScore else score, data)
     }
 
     // This connects to lingva.ml which runs the Lingva Translate frontend to Google Translate
