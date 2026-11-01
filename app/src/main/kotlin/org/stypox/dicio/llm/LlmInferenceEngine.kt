@@ -6,6 +6,10 @@ interface LlmInferenceEngine {
     suspend fun close()
 }
 
+// a request after this long without one starts a new conversation: follow-up questions keep their
+// context, but the context does not grow without bound (LiteRT-LM fails beyond maxNumTokens)
+const val LLM_CONVERSATION_IDLE_MS = 5 * 60 * 1000L
+
 // low: tool calls and short factual answers should be reproducible, not creative
 const val LLM_TEMPERATURE = 0.2
 

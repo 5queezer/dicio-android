@@ -34,6 +34,7 @@ class RealLlmEngine @Inject constructor(
     private val mutex = Mutex()
     private var engine: Engine? = null
     private var conversation: Conversation? = null
+    private var lastUse = 0L
 
     override val isReady: Boolean
         get() = conversation != null
@@ -51,20 +52,26 @@ class RealLlmEngine @Inject constructor(
             )
         ).also { it.initialize() }
 
-        conversation = newEngine.createConversation(
-            ConversationConfig(
-                samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = LLM_TEMPERATURE),
-                systemInstruction = Contents.of(listOf(Content.Text(LLM_SYSTEM_INSTRUCTION))),
-                tools = listOf(tool(dicioTools)),
-            )
-        )
+        conversation = newConversation(newEngine)
         engine = newEngine
     }
+
+    private fun newConversation(engine: Engine) = engine.createConversation(
+        ConversationConfig(
+            samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = LLM_TEMPERATURE),
+            systemInstruction = Contents.of(listOf(Content.Text(LLM_SYSTEM_INSTRUCTION))),
+            tools = listOf(tool(dicioTools)),
+        )
+    )
 
     override suspend fun generate(prompt: String): String = mutex.withLock {
         if (conversation == null) {
             initialize()
+        } else if (System.currentTimeMillis() - lastUse > LLM_CONVERSATION_IDLE_MS) {
+            conversation?.close()
+            conversation = newConversation(engine!!)
         }
+        lastUse = System.currentTimeMillis()
         val conv = conversation ?: error("Conversation is null after initialize()")
 
         suspendCancellableCoroutine { cont ->

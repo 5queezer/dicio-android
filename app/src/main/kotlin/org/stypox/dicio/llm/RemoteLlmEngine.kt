@@ -67,6 +67,7 @@ class RemoteLlmEngine @Inject constructor(
     }
     private val mutex = Mutex()
     private var messages = newConversation()
+    private var lastUse = 0L
 
     override val isReady: Boolean
         get() = true
@@ -75,6 +76,10 @@ class RemoteLlmEngine @Inject constructor(
         val settings = dataStore.data.first()
         val url = settings.llmRemoteUrl.trimEnd('/') + "/chat/completions"
         Log.d(TAG, "generate model=${settings.llmRemoteModel} prompt=$prompt")
+        if (System.currentTimeMillis() - lastUse > LLM_CONVERSATION_IDLE_MS) {
+            messages = newConversation()
+        }
+        lastUse = System.currentTimeMillis()
         messages.put(JSONObject().put("role", "user").put("content", prompt))
 
         repeat(MAX_TOOL_ROUNDS) {
