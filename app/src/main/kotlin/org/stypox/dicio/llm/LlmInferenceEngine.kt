@@ -6,6 +6,9 @@ interface LlmInferenceEngine {
     suspend fun close()
 }
 
+// low: tool calls and short factual answers should be reproducible, not creative
+const val LLM_TEMPERATURE = 0.2
+
 const val LLM_SYSTEM_INSTRUCTION =
     "You are a helpful voice assistant. You do TWO kinds of things: " +
     "(a) answer factual and general-knowledge questions from your training, and " +

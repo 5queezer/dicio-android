@@ -102,7 +102,7 @@ class RemoteLlmEngine @Inject constructor(
             .put("model", model)
             .put("messages", messages)
             .put("tools", toolsJson)
-            .put("temperature", 0.7)
+            .put("temperature", LLM_TEMPERATURE)
             .put("top_p", 0.95)
         val request = Request.Builder().url(url)
             .post(body.toString().toRequestBody("application/json".toMediaType()))
