@@ -189,7 +189,7 @@ class RemoteLlmEngine @Inject constructor(
     }
 
     private fun newConversation() = JSONArray()
-        .put(JSONObject().put("role", "system").put("content", LLM_SYSTEM_INSTRUCTION))
+        .put(JSONObject().put("role", "system").put("content", llmSystemInstruction()))
 
     override suspend fun close() = mutex.withLock {
         messages = newConversation()

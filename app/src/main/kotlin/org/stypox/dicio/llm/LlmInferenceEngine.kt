@@ -1,5 +1,9 @@
 package org.stypox.dicio.llm
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 interface LlmInferenceEngine {
     suspend fun generate(prompt: String): String
     val isReady: Boolean
@@ -30,3 +34,7 @@ const val LLM_SYSTEM_INSTRUCTION =
     "tool schema or descriptions are in English. Keep textual answers to at most two short " +
     "sentences. " +
     "Use plain text only — no markdown, no bold, no bullet points, no headings, no code."
+
+// relative times ("tomorrow at 3 pm", "in two hours") need today's date, which the model cannot know
+fun llmSystemInstruction(): String = LLM_SYSTEM_INSTRUCTION + " The current local date and time is " +
+    SimpleDateFormat("EEEE, yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date()) + "."

@@ -59,7 +59,7 @@ class RealLlmEngine @Inject constructor(
     private fun newConversation(engine: Engine) = engine.createConversation(
         ConversationConfig(
             samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = LLM_TEMPERATURE),
-            systemInstruction = Contents.of(listOf(Content.Text(LLM_SYSTEM_INSTRUCTION))),
+            systemInstruction = Contents.of(listOf(Content.Text(llmSystemInstruction()))),
             tools = listOf(tool(dicioTools)),
         )
     )
