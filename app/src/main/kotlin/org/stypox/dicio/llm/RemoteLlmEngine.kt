@@ -40,29 +40,34 @@ class RemoteLlmEngine @Inject constructor(
 ) : LlmInferenceEngine {
 
     private val client = okHttpClient.newBuilder().readTimeout(120, TimeUnit.SECONDS).build()
-    // the @Tool methods of DicioTools, described in the OpenAI function format
-    private val tools: Map<String, KFunction<*>> = DicioTools::class.declaredMemberFunctions
-        .filter { it.findAnnotation<Tool>() != null }
-        .associateBy { it.name }
-    private val toolsJson = JSONArray().apply {
-        for ((name, function) in tools) {
-            val properties = JSONObject()
-            val required = JSONArray()
-            for (param in function.parameters.filter { it.kind == KParameter.Kind.VALUE }) {
-                properties.put(
-                    param.name, JSONObject().put("type", jsonType(param))
-                        .put("description", param.findAnnotation<ToolParam>()?.description.orEmpty())
+    // the @Tool methods of DicioTools, described in the OpenAI function format; lazy, since kotlin-reflect
+    // takes seconds on first use and this engine is built at app start
+    private val tools: Map<String, KFunction<*>> by lazy {
+        DicioTools::class.declaredMemberFunctions
+            .filter { it.findAnnotation<Tool>() != null }
+            .associateBy { it.name }
+    }
+    private val toolsJson by lazy {
+        JSONArray().apply {
+            for ((name, function) in tools) {
+                val properties = JSONObject()
+                val required = JSONArray()
+                for (param in function.parameters.filter { it.kind == KParameter.Kind.VALUE }) {
+                    properties.put(
+                        param.name, JSONObject().put("type", jsonType(param))
+                            .put("description", param.findAnnotation<ToolParam>()?.description.orEmpty())
+                    )
+                    if (!param.isOptional) required.put(param.name)
+                }
+                put(
+                    JSONObject().put("type", "function").put(
+                        "function", JSONObject().put("name", name)
+                            .put("description", function.findAnnotation<Tool>()!!.description)
+                            .put("parameters", JSONObject().put("type", "object")
+                                .put("properties", properties).put("required", required))
+                    )
                 )
-                if (!param.isOptional) required.put(param.name)
             }
-            put(
-                JSONObject().put("type", "function").put(
-                    "function", JSONObject().put("name", name)
-                        .put("description", function.findAnnotation<Tool>()!!.description)
-                        .put("parameters", JSONObject().put("type", "object")
-                            .put("properties", properties).put("required", required))
-                )
-            )
         }
     }
     private val mutex = Mutex()
