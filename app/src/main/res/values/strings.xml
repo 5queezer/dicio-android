@@ -294,6 +294,10 @@
     <string name="llm_model_download_error">Download failed</string>
     <string name="llm_model_download_retry">Retry</string>
     <string name="pref_llm_model">LLM model</string>
+    <string name="pref_llm_remote_url">LLM server</string>
+    <string name="pref_llm_remote_url_summary">OpenAI-compatible server, e.g. Ollama or llama.cpp on your home network</string>
+    <string name="pref_llm_remote_url_empty">None: the model runs on this device. Set an OpenAI-compatible server URL (e.g. http://192.168.1.10:11434/v1) to use it instead</string>
+    <string name="pref_llm_remote_model">LLM server model</string>
     <string name="pref_llm_model_summary">Choose which on-device LLM to download</string>
     <string name="pref_llm_model_size_ram">~%1$.1f GB, needs ≥%2$d GB RAM</string>
     <string name="pref_llm_model_with_size">%1$s (%2$s)</string>

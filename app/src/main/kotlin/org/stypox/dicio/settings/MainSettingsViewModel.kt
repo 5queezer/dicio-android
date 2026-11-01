@@ -92,7 +92,7 @@ class MainSettingsViewModel @Inject constructor(
 
     fun setFallbackMode(value: FallbackMode) {
         updateData { it.setFallbackMode(value) }
-        if (value == FallbackMode.FALLBACK_MODE_LLM) {
+        if (value == FallbackMode.FALLBACK_MODE_LLM && settingsState.value.llmRemoteUrl.isBlank()) {
             val current = llmModelDownloader.state.value
             if (current is LlmModelDownloadState.NotDownloaded ||
                 current is LlmModelDownloadState.ErrorDownloading) {
@@ -103,6 +103,10 @@ class MainSettingsViewModel @Inject constructor(
 
     fun setSelectedLlmModel(id: String) =
         updateData { it.setSelectedLlmModelId(id) }
+    fun setLlmRemoteUrl(value: String) =
+        updateData { it.setLlmRemoteUrl(value.trim()) }
+    fun setLlmRemoteModel(value: String) =
+        updateData { it.setLlmRemoteModel(value.trim()) }
 
     fun retryLlmDownload() {
         viewModelScope.launch { llmModelDownloader.download() }

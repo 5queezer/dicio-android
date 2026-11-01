@@ -49,6 +49,7 @@ import org.stypox.dicio.settings.datastore.UserSettingsModule.Companion.newDataS
 import org.stypox.dicio.settings.datastore.WakeDevice
 import org.stypox.dicio.settings.ui.SettingsCategoryTitle
 import org.stypox.dicio.settings.ui.SettingsItem
+import org.stypox.dicio.settings.ui.StringSetting
 import org.stypox.dicio.ui.theme.AppTheme
 import org.stypox.dicio.ui.util.LoadingProgress
 import org.stypox.dicio.ui.util.loadingProgressString
@@ -221,6 +222,23 @@ private fun MainSettingsScreen(
             fallbackMode().Render(fallback, viewModel::setFallbackMode)
         }
         if (fallback == FallbackMode.FALLBACK_MODE_LLM) {
+            item {
+                StringSetting(
+                    title = stringResource(R.string.pref_llm_remote_url),
+                    icon = Icons.Default.Psychology,
+                    description = stringResource(R.string.pref_llm_remote_url_summary),
+                    descriptionWhenEmpty = stringResource(R.string.pref_llm_remote_url_empty),
+                ).Render(settings.llmRemoteUrl, viewModel::setLlmRemoteUrl)
+            }
+        }
+        if (fallback == FallbackMode.FALLBACK_MODE_LLM && settings.llmRemoteUrl.isNotBlank()) {
+            item {
+                StringSetting(
+                    title = stringResource(R.string.pref_llm_remote_model),
+                    icon = Icons.Default.Psychology,
+                ).Render(settings.llmRemoteModel, viewModel::setLlmRemoteModel)
+            }
+        } else if (fallback == FallbackMode.FALLBACK_MODE_LLM) {
             item {
                 val selectedId = settings.selectedLlmModelId.ifEmpty { viewModel.recommendedModelId }
                 llmModel(viewModel.models, viewModel.totalRamGb).Render(
