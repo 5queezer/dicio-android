@@ -5,13 +5,16 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.provider.Settings
 import android.util.Log
 import com.google.ai.edge.litertlm.Tool
 import com.google.ai.edge.litertlm.ToolParam
 import com.google.ai.edge.litertlm.ToolSet
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.stypox.dicio.skills.telephone.Contact
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -171,5 +174,54 @@ class DicioTools @Inject constructor(
                 mapOf("result" to "success", "app" to label, "package" to pkg)
             }
         }
+    }
+
+    @Tool(description = "Opens the messaging app with a text message to a contact or phone number filled in. The user must press send.")
+    fun sendMessage(
+        @ToolParam(description = "Contact name as saved in the address book, or a phone number.") recipient: String,
+        @ToolParam(description = "The message text.") text: String,
+    ): Map<String, String> = runTool("compose message", "no messaging app") {
+        val number = if (recipient.any { it.isLetter() }) {
+            val contact = Contact.getFilteredSortedContacts(context.contentResolver, recipient).firstOrNull()
+                ?: return@runTool mapOf("result" to "error", "reason" to "no contact matching '$recipient'")
+            contact.getNumbers(context.contentResolver).firstOrNull()
+                ?: return@runTool mapOf("result" to "error", "reason" to "${contact.name} has no phone number")
+        } else {
+            recipient
+        }
+        val intent = Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null)).apply {
+            putExtra("sms_body", text)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        mapOf("result" to "success", "number" to number, "text" to text)
+    }
+
+    @Tool(description = "Opens the maps app with directions to a place or address.")
+    fun navigateTo(
+        @ToolParam(description = "The destination: a place name or an address.") destination: String,
+    ): Map<String, String> = runTool("start navigation", "no maps app") {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(destination))).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+        mapOf("result" to "success", "destination" to destination)
+    }
+
+    @Tool(description = "Opens a quick settings panel so the user can toggle it: wifi, bluetooth, volume, internet or location.")
+    fun openSettingsPanel(
+        @ToolParam(description = "One of: wifi, bluetooth, volume, internet, location.") panel: String,
+    ): Map<String, String> = runTool("open settings", "no settings app") {
+        val panels = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q  // Settings.Panel is API 29
+        val action = when (panel.lowercase()) {
+            "wifi" -> if (panels) Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS
+            "volume" -> if (panels) Settings.Panel.ACTION_VOLUME else Settings.ACTION_SOUND_SETTINGS
+            "internet" -> if (panels) Settings.Panel.ACTION_INTERNET_CONNECTIVITY else Settings.ACTION_WIRELESS_SETTINGS
+            "bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS
+            "location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            else -> return@runTool mapOf("result" to "error", "reason" to "unknown panel '$panel'")
+        }
+        context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        mapOf("result" to "success", "panel" to panel)
     }
 }
