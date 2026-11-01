@@ -17,6 +17,7 @@ import org.stypox.dicio.di.SkillContextInternal
 import org.stypox.dicio.llm.LlmInferenceEngine
 import org.stypox.dicio.llm.LlmModelProvider
 import org.stypox.dicio.llm.MockLlmEngine
+import org.stypox.dicio.llm.REMOTE_LLM
 import org.stypox.dicio.settings.datastore.FallbackMode
 import org.stypox.dicio.settings.datastore.UserSettings
 import org.stypox.dicio.settings.datastore.UserSettingsModule
@@ -38,6 +39,7 @@ import org.stypox.dicio.skills.weather.WeatherInfo
 import org.stypox.dicio.skills.joke.JokeInfo
 import org.stypox.dicio.skills.flashlight.FlashlightInfo
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
@@ -47,6 +49,7 @@ class SkillHandler @Inject constructor(
     private val skillContext: SkillContextInternal,
     private val llmEngine: LlmInferenceEngine,
     private val llmModelProvider: LlmModelProvider,
+    @Named(REMOTE_LLM) remoteLlmEngine: LlmInferenceEngine,
 ) {
     // TODO improve id handling (maybe just use an int that can point to an Android resource)
     val allSkillInfoList = listOf(
@@ -69,6 +72,7 @@ class SkillHandler @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.Default)
     private val llmFallbackInfo = LlmFallbackInfo(llmEngine)
+    private val remoteLlmFallbackInfo = LlmFallbackInfo(remoteLlmEngine)
 
     // will be null when it has not been initialized yet
     private val _enabledSkillsInfo: MutableStateFlow<List<SkillInfo>?> = MutableStateFlow(null)
@@ -85,10 +89,11 @@ class SkillHandler @Inject constructor(
             var previousFallback: SkillInfo = TextFallbackInfo
             localeManager.locale
                 .combine(dataStore.data) { locale, data ->
-                    Triple(locale, data.enabledSkillsMap, data.fallbackMode)
+                    Triple(locale, data.enabledSkillsMap, Pair(data.fallbackMode, data.llmRemoteUrl))
                 }
                 .distinctUntilChanged()
-                .collectLatest { (_, enabledSkills, fallbackMode) ->
+                .collectLatest { (_, enabledSkills, fallback) ->
+                    val (fallbackMode, llmRemoteUrl) = fallback
                     // locale is not used here, because the skills directly use the sections locale
 
                     val newEnabledSkillsInfo = allSkillInfoList
@@ -96,8 +101,9 @@ class SkillHandler @Inject constructor(
                         .mapNotNull { info -> info.build(skillContext)?.let { skill -> Pair(info, skill) } }
 
                     val activeFallback: SkillInfo = when {
-                        fallbackMode == FallbackMode.FALLBACK_MODE_LLM &&
-                                llmModelProvider.getModelPath() != null -> llmFallbackInfo
+                        fallbackMode != FallbackMode.FALLBACK_MODE_LLM -> TextFallbackInfo
+                        llmRemoteUrl.isNotBlank() -> remoteLlmFallbackInfo
+                        llmModelProvider.getModelPath() != null -> llmFallbackInfo
                         else -> TextFallbackInfo
                     }
 
@@ -125,6 +131,7 @@ class SkillHandler @Inject constructor(
                 SkillContextImpl.newForPreviews(context),
                 MockLlmEngine(),
                 object : LlmModelProvider { override fun getModelPath(): String? = null },
+                MockLlmEngine(),
             )
         }
     }

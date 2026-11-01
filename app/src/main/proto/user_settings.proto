@@ -24,4 +24,7 @@ message UserSettings {
     int32 stt_silence_duration = 10;
     FallbackMode fallback_mode = 11;
     string selected_llm_model_id = 12;
+    // OpenAI-compatible server for the LLM fallback (e.g. http://host:11434/v1); empty = on-device model
+    string llm_remote_url = 13;
+    string llm_remote_model = 14;
 }

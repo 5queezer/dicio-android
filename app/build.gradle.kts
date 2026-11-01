@@ -180,6 +180,7 @@ dependencies {
     // LiteRT / Tensorflow Lite
     implementation(libs.litert)
     implementation(libs.litertlm)
+    implementation(libs.kotlin.reflect)
 
     // Markdown rendering for LLM fallback output
     implementation(libs.richtext.commonmark)
