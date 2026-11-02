@@ -59,7 +59,7 @@ class RealLlmEngine @Inject constructor(
     private fun newConversation(engine: Engine) = engine.createConversation(
         ConversationConfig(
             samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = LLM_TEMPERATURE),
-            systemInstruction = Contents.of(listOf(Content.Text(llmSystemInstruction()))),
+            systemInstruction = Contents.of(listOf(Content.Text(LLM_SYSTEM_INSTRUCTION))),
             tools = listOf(tool(dicioTools)),
         )
     )
@@ -88,7 +88,7 @@ class RealLlmEngine @Inject constructor(
         suspendCancellableCoroutine { cont ->
             val accumulated = StringBuilder()
             conv.sendMessageAsync(
-                Contents.of(listOf(Content.Text(prompt))),
+                Contents.of(listOf(Content.Text(llmUserMessage(prompt)))),
                 object : MessageCallback {
                     override fun onMessage(message: Message) {
                         // message.toString() is a per-token delta on the main channel;

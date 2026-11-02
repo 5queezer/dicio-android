@@ -35,6 +35,8 @@ const val LLM_SYSTEM_INSTRUCTION =
     "sentences. " +
     "Use plain text only — no markdown, no bold, no bullet points, no headings, no code."
 
-// relative times ("tomorrow at 3 pm", "in two hours") need today's date, which the model cannot know
-fun llmSystemInstruction(): String = LLM_SYSTEM_INSTRUCTION + " The current local date and time is " +
-    SimpleDateFormat("EEEE, yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date()) + "."
+// relative times ("tomorrow at 3 pm", "in two hours") need today's date, which the model cannot know; it goes
+// at the end of each user message, not into the system instruction, so that the long fixed prefix (system
+// instruction and tools) stays the same between requests and the server's prompt cache can reuse it
+fun llmUserMessage(prompt: String): String = prompt + "\n\n(Current local date and time: " +
+    SimpleDateFormat("EEEE, yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date()) + ")"

@@ -88,7 +88,7 @@ class RemoteLlmEngine @Inject constructor(
         lastUse = System.currentTimeMillis()
         val start = messages.length()
         try {
-            messages.put(JSONObject().put("role", "user").put("content", prompt))
+            messages.put(JSONObject().put("role", "user").put("content", llmUserMessage(prompt)))
             for (round in 0..MAX_TOOL_ROUNDS) {
                 // the last round offers no tools, so a model that keeps calling them has to answer
                 val message = complete(url, settings.llmRemoteModel, tools = round < MAX_TOOL_ROUNDS)
@@ -189,7 +189,7 @@ class RemoteLlmEngine @Inject constructor(
     }
 
     private fun newConversation() = JSONArray()
-        .put(JSONObject().put("role", "system").put("content", llmSystemInstruction()))
+        .put(JSONObject().put("role", "system").put("content", LLM_SYSTEM_INSTRUCTION))
 
     override suspend fun close() = mutex.withLock {
         messages = newConversation()
